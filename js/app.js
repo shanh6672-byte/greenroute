@@ -220,11 +220,25 @@
     const treeIcon = createTreeIcon('#2E7D32', '#4CAF50');
     const dispIcon = createDisposalIcon();
 
-    STATE.parks.forEach(p => {
+    STATE.parks.forEach((p, i) => {
+      // 浅绿色圆形绿地标注
+      const radius = 80 + (i % 3) * 40; // 80-160m 半径
+      const circle = new AMap.Circle({
+        center: [p.lng, p.lat],
+        radius: radius,
+        fillColor: '#C8E6C9',
+        fillOpacity: 0.45,
+        strokeColor: '#66BB6A',
+        strokeWeight: 1,
+        strokeOpacity: 0.5,
+        zIndex: 10,
+      });
+      STATE.map.add(circle);
+      // 小绿树标记
       const m = new AMap.Marker({
         position: [p.lng, p.lat], title: p.name,
         icon: treeIcon,
-        offset: new AMap.Pixel(-10, -30),
+        offset: new AMap.Pixel(-9, -20),
         zIndex: 100,
       });
       m.on('click', () => setOriginByCoord(p.lng, p.lat, p.name));
