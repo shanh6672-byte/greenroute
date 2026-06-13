@@ -104,42 +104,46 @@
     });
   }
 
-  function createHouseIcon(fill, stroke) {
+  function createDisposalIcon() {
     const canvas = document.createElement('canvas');
-    canvas.width = 28; canvas.height = 32;
+    canvas.width = 28; canvas.height = 34;
     const ctx = canvas.getContext('2d');
-    // 房屋
-    ctx.fillStyle = '#FFF9C4';
-    ctx.fillRect(4, 12, 20, 20);
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 1.2;
-    ctx.strokeRect(4, 12, 20, 20);
-    // 屋顶
+    const w = 24, h = 28, x = 2, y = 4;
+    // 圆角矩形主体
+    const r = 5;
     ctx.beginPath();
-    ctx.moveTo(2, 13);
-    ctx.lineTo(14, 2);
-    ctx.lineTo(26, 13);
+    ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y);
+    ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+    ctx.lineTo(x+w, y+h-r);
+    ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+    ctx.lineTo(x+r, y+h);
+    ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+    ctx.lineTo(x, y+r);
+    ctx.quadraticCurveTo(x, y, x+r, y);
     ctx.closePath();
-    ctx.fillStyle = fill;
+    ctx.fillStyle = '#1565C0';
     ctx.fill();
+    ctx.strokeStyle = '#0D47A1';
+    ctx.lineWidth = 1.2;
     ctx.stroke();
-    // 门
-    ctx.fillStyle = '#5D4037';
-    ctx.fillRect(11, 22, 6, 10);
-    // 回收标
-    ctx.beginPath();
-    ctx.arc(14, 18, 4, 0, Math.PI * 2);
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 0.8;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(12, 16); ctx.lineTo(14, 14); ctx.lineTo(16, 16);
-    ctx.moveTo(12, 18); ctx.lineTo(14, 16); ctx.lineTo(16, 18);
-    ctx.stroke();
+    // 回收箭头 (白色)
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    const cx = 14, cy = 16;
+    // 箭头1
+    ctx.beginPath(); ctx.moveTo(cx-3, cy+4); ctx.lineTo(cx, cy-1); ctx.lineTo(cx+3, cy+4); ctx.stroke();
+    // 箭头2
+    ctx.beginPath(); ctx.moveTo(cx-3, cy+1); ctx.lineTo(cx, cy-4); ctx.lineTo(cx+3, cy+1); ctx.stroke();
+    // 箭头3
+    ctx.beginPath(); ctx.moveTo(cx+1, cy+3); ctx.lineTo(cx-4, cy); ctx.lineTo(cx+1, cy-3); ctx.stroke();
+    // 顶部小横条
+    ctx.fillStyle = '#0D47A1';
+    ctx.fillRect(6, 2, 16, 4);
     return new AMap.Icon({
-      size: new AMap.Size(28, 32),
+      size: new AMap.Size(28, 34),
       image: canvas.toDataURL(),
-      imageSize: new AMap.Size(28, 32),
+      imageSize: new AMap.Size(28, 34),
     });
   }
 
@@ -230,7 +234,7 @@
   function addAllMarkers() {
     // 创建小绿树图标 (Canvas)
     const treeIcon = createTreeIcon('#2E7D32', '#4CAF50');
-    const houseIcon = createHouseIcon('#C62828', '#E53935');
+    const dispIcon = createDisposalIcon();
 
     STATE.parks.forEach(p => {
       const m = new AMap.Marker({
@@ -245,7 +249,7 @@
     STATE.disposals.forEach(d => {
       const m = new AMap.Marker({
         position: [d.lng, d.lat], title: d.name,
-        icon: houseIcon,
+        icon: dispIcon,
         offset: new AMap.Pixel(-12, -32),
         zIndex: 100,
       });
