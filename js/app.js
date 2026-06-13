@@ -607,209 +607,289 @@
       </div>`;
   }
 
-  // ==================== CVRP 多车调度 ====================
-  const CVRP_COLORS = ['#2E7D32','#1565C0','#E65100','#6A1B9A','#C62828','#00695C','#EF6C00','#4527A0'];
+  // ==================== CVRP 多车调度 (修复版) ====================
+  const CVRP_COLORS = ['#D32F2F','#1976D2','#388E3C','#7B1FA2','#E64A19','#00796B'];
+  const cvrpLayers = []; // { vehicleId, polylines: [], markers: [], visible: true }
 
   async function solveCVRP() {
     const btn = document.getElementById('btnCVRP');
-    btn.textContent = '⏳ 调度计算中...';
-    btn.disabled = true;
+    btn.textContent = '⏳ 调度计算中...'; btn.disabled = true;
 
-    // 各公园日均固废产量 (基于面积估算, kg/天)
+    // 固废产量 (kg/天) — 基于面积估算
     const wasteMap = {
-      '奥林匹克森林公园':8000,'奥林匹克公园':5500,'朝阳公园':5000,'圆明园':5000,'颐和园':4500,
-      '温榆河公园':4000,'将府公园':2500,'太阳宫公园':2000,'红领巾公园':1800,'日坛公园':1500,
-      '望京公园':1200,'四得公园':800,'团结湖公园':1000,'金铃狮园':900,'海淀公园':2000,
+      '奥林匹克森林公园':8000,'奥林匹克公园':5500,'朝阳公园':5000,
+      '温榆河公园':4000,'将府公园':2500,'太阳宫公园':2000,'红领巾公园':1800,
+      '日坛公园':1500,'望京公园':1200,'团结湖公园':1000,'金铃狮园':900,
+      '四得公园':800,'北小河公园':1500,'望和公园':1200,'朝来森林公园':1800,
+      '东坝公园':1500,'常营公园':1300,'古塔公园':1100,'京城梨园':1000,
+      '兴隆公园':1600,'北小河公园':1400,'望湖公园':900,'元大都城垣遗址公园':2000,
+      '玉渊潭公园':3000,'陶然亭公园':2200,'紫竹院公园':1800,'海淀公园':2000,
+      '东风公园':1200,'京城槐园':1000,'金盏森林公园':2000,'马家湾湿地公园':800,
     };
-    const defaultWaste = 600;
+    const defaultWaste = 500;
     const parksWithWaste = STATE.parks.map(p => ({
       ...p, waste: wasteMap[p.name] || defaultWaste
-    }));
+    })).sort((a, b) => b.waste - a.waste);
 
     // 消纳点容量 (kg/天)
     const capMap = {
-      '高安屯垃圾填埋场':80000,'小武基大型固废垃圾转运站':50000,'大屯垃圾转运站':40000,
-      '朝环三清场酒仙桥有机生物处理站':35000,'朝阳生活垃圾焚烧中心':30000,
+      '高安屯垃圾填埋场':60000,'小武基大型固废垃圾转运站':40000,
+      '大屯垃圾转运站':30000,'朝环三清场酒仙桥有机生物处理站':30000,
+      '朝阳生活垃圾焚烧中心':30000,
     };
-    const defaultCap = 20000;
+    const defaultCap = 15000;
     const disposalsWithCap = STATE.disposals.map(d => ({
       ...d, capacity: capMap[d.name] || defaultCap
     }));
 
-    // 车辆配置 (中型柴油货车, 载重8-12吨)
+    // 车辆: 载重严格不可超
     const VEHICLES = [
-      { id: 1, capacity: 10000, color: CVRP_COLORS[0] },
-      { id: 2, capacity: 10000, color: CVRP_COLORS[1] },
-      { id: 3, capacity: 8000,  color: CVRP_COLORS[2] },
-      { id: 4, capacity: 8000,  color: CVRP_COLORS[3] },
-      { id: 5, capacity: 12000, color: CVRP_COLORS[4] },
-      { id: 6, capacity: 5000,  color: CVRP_COLORS[5] },
+      { id: 1, capacity: 8000 }, { id: 2, capacity: 8000 },
+      { id: 3, capacity: 10000 }, { id: 4, capacity: 10000 },
+      { id: 5, capacity: 5000 },
     ];
 
-    // 贪婪CVRP: 大产量优先 → 选综合成本最小的消纳点 → 分配给有剩余容量的车
-    const sorted = [...parksWithWaste].sort((a, b) => b.waste - a.waste);
-    const routes = VEHICLES.map(v => ({ vehicle: v, stops: [], load: 0, disposal: null }));
-    const dispRemaining = disposalsWithCap.map(d => d.capacity);
+    // 初始化空路线
+    const routes = VEHICLES.map(v => ({ vehicle: v, stops: [], load: 0, dispIdx: -1 }));
+    const dispAvail = disposalsWithCap.map(d => d.capacity);
 
-    sorted.forEach(park => {
-      // 找到综合成本最小且容量充足的消纳点
-      let bestDisp = -1, bestCost = Infinity;
-      disposalsWithCap.forEach((d, di) => {
-        if (dispRemaining[di] >= park.waste) {
+    // 贪婪分配: 大产量优先, 消纳点容量+车载容量双重约束
+    let unassigned = [];
+    parksWithWaste.forEach(park => {
+      let bestVeh = -1, bestDisp = -1, bestCost = Infinity;
+
+      for (let vi = 0; vi < routes.length; vi++) {
+        const r = routes[vi];
+        const vehRemain = r.vehicle.capacity - r.load;
+        if (vehRemain < park.waste) continue; // 车载不下, 跳过
+
+        for (let di = 0; di < disposalsWithCap.length; di++) {
+          if (dispAvail[di] < park.waste) continue; // 消纳点满了, 跳过
+
+          const d = disposalsWithCap[di];
           const dist = haversine(park.lng, park.lat, d.lng, d.lat);
-          const speed = 35;
-          const timeMin = dist / speed * 60;
-          const co2 = AHP.co2Factor(speed) * dist;
-          const fuel = AHP.fuelCost(speed) * dist;
+          const speed = 35, timeMin = dist/speed*60;
+          const co2 = AHP.co2Factor(speed)*dist, fuel = AHP.fuelCost(speed)*dist;
           const cost = 0.42*dist/50 + 0.23*timeMin/90 + 0.12*co2/10 + 0.23*fuel/60;
-          if (cost < bestCost) { bestCost = cost; bestDisp = di; }
-        }
-      });
-      if (bestDisp < 0) bestDisp = 0;
 
-      // 分配给剩余容量最大的车
-      let bestVeh = -1, maxRemain = -1;
-      routes.forEach((r, vi) => {
-        const remain = r.vehicle.capacity - r.load;
-        if (remain >= park.waste && remain > maxRemain) {
-          maxRemain = remain; bestVeh = vi;
+          if (cost < bestCost) { bestCost = cost; bestVeh = vi; bestDisp = di; }
         }
-      });
-      if (bestVeh < 0) bestVeh = 0;
+      }
 
-      routes[bestVeh].stops.push(park);
-      routes[bestVeh].load += park.waste;
-      routes[bestVeh].disposal = bestDisp;
-      dispRemaining[bestDisp] -= park.waste;
+      if (bestVeh >= 0 && bestDisp >= 0) {
+        routes[bestVeh].stops.push(park);
+        routes[bestVeh].load += park.waste;
+        routes[bestVeh].dispIdx = bestDisp;
+        dispAvail[bestDisp] -= park.waste;
+      } else {
+        unassigned.push(park);
+      }
     });
 
-    // 清除旧路径
-    if (mapOverlays.polyline) { STATE.map.remove(mapOverlays.polyline); mapOverlays.polyline = null; }
-    if (mapOverlays.startMarker) { STATE.map.remove(mapOverlays.startMarker); mapOverlays.startMarker = null; }
-    if (mapOverlays.endMarker) { STATE.map.remove(mapOverlays.endMarker); mapOverlays.endMarker = null; }
+    // 清除旧 CVRP 图层
+    clearCVRPLayers();
     STATE.map.clearMap();
     addAllMarkers();
 
-    // 绘制各车路线
+    // 只取有任务的车, 限制总路径数
     const usedRoutes = routes.filter(r => r.stops.length > 0);
     let totalDist = 0, totalLoad = 0;
     const summaryRows = [];
+    const allVehiclePaths = []; // [ { vid, coords, color } ]
 
-    for (const route of usedRoutes) {
-      const disp = disposalsWithCap[route.disposal];
+    btn.textContent = '⏳ 获取真实路径...';
+
+    for (let ri = 0; ri < usedRoutes.length; ri++) {
+      const route = usedRoutes[ri];
+      const disp = disposalsWithCap[route.dispIdx];
+      const color = CVRP_COLORS[ri % CVRP_COLORS.length];
       let prevPoint = null;
       const allCoords = [];
 
-      for (const stop of route.stops) {
+      // 只获取前6条公园间路径 (避免API调用过多)
+      const maxRouteSegments = 6;
+      const stopsToRoute = route.stops.slice(0, maxRouteSegments + 1);
+
+      for (let si = 0; si < stopsToRoute.length; si++) {
+        const stop = stopsToRoute[si];
         if (prevPoint) {
-          try {
-            const path = await fetchRouteCoords(prevPoint, stop);
-            allCoords.push(...path);
-          } catch(e) {}
+          btn.textContent = '⏳ 车' + route.vehicle.id + ' 路径' + si + '...';
+          const coords = await fetchRouteCoords(prevPoint, stop);
+          if (coords.length > 0) allCoords.push(...coords);
+          else {
+            // 直线兜底
+            allCoords.push([prevPoint.lng, prevPoint.lat]);
+            allCoords.push([stop.lng, stop.lat]);
+          }
         }
         prevPoint = stop;
         totalLoad += stop.waste;
       }
 
-      // 最后去消纳点
+      // 最后一段: 公园→消纳点
       if (prevPoint && disp) {
-        try {
-          const path = await fetchRouteCoords(prevPoint, disp);
-          allCoords.push(...path);
-          const dist = haversine(prevPoint.lng, prevPoint.lat, disp.lng, disp.lat);
-          totalDist += dist;
-        } catch(e) {}
+        btn.textContent = '⏳ 车' + route.vehicle.id + ' →消纳点...';
+        const coords = await fetchRouteCoords(prevPoint, disp);
+        if (coords.length > 0) allCoords.push(...coords);
+        else { allCoords.push([prevPoint.lng, prevPoint.lat]); allCoords.push([disp.lng, disp.lat]); }
+        totalDist += haversine(prevPoint.lng, prevPoint.lat, disp.lng, disp.lat);
       }
 
-      // 绘制
-      if (allCoords.length > 0) {
-        new AMap.Polyline({
-          path: allCoords, strokeColor: route.vehicle.color,
-          strokeWeight: 4, strokeOpacity: 0.6, lineJoin: 'round',
-        }).setMap(STATE.map);
-      }
+      allVehiclePaths.push({ vid: route.vehicle.id, coords: allCoords, color: color });
 
-      // 标记各公园序号
-      route.stops.forEach((stop, si) => {
-        new AMap.Marker({
-          position: [stop.lng, stop.lat],
-          label: { content: (si+1).toString(), direction: 'center', offset: new AMap.Pixel(0, 0) },
-          icon: new AMap.Icon({
-            size: new AMap.Size(18, 18),
-            image: createCircleIcon(route.vehicle.color),
-            imageSize: new AMap.Size(18, 18),
-          }),
-        }).setMap(STATE.map);
+      // 绘制路线 (默认全部显示)
+      const polyline = new AMap.Polyline({
+        path: allCoords, strokeColor: color, strokeWeight: 5,
+        strokeOpacity: 0.7, lineJoin: 'round', lineCap: 'round',
       });
+      polyline.setMap(STATE.map);
+
+      // 标记点
+      const markers = [];
+      route.stops.forEach((stop, si) => {
+        if (si < maxRouteSegments + 1) {
+          const m = new AMap.Marker({
+            position: [stop.lng, stop.lat],
+            label: { content: 'V'+route.vehicle.id, direction: 'top', offset: new AMap.Pixel(0,-5) },
+            icon: new AMap.Icon({
+              size: new AMap.Size(16,16),
+              image: createCircleIcon(color),
+              imageSize: new AMap.Size(16,16),
+            }),
+          });
+          m.setMap(STATE.map);
+          markers.push(m);
+        }
+      });
+      if (disp) {
+        const dm = new AMap.Marker({
+          position: [disp.lng, disp.lat],
+          label: { content: '消', direction: 'bottom' },
+          icon: new AMap.Icon({
+            size: new AMap.Size(20,20),
+            image: createCircleIcon('#333'),
+            imageSize: new AMap.Size(20,20),
+          }),
+        });
+        dm.setMap(STATE.map);
+        markers.push(dm);
+      }
+
+      cvrpLayers.push({ vehicleId: route.vehicle.id, polyline, markers, visible: true, color });
 
       summaryRows.push({
         vehicle: route.vehicle.id,
+        color: color,
         stops: route.stops.length,
         load: route.load,
         capacity: route.vehicle.capacity,
-        util: (route.load/route.vehicle.capacity*100).toFixed(0),
+        util: Math.min((route.load/route.vehicle.capacity*100), 100).toFixed(0),
+        overCap: route.load > route.vehicle.capacity,
         disposal: disp ? disp.name : '?',
       });
     }
 
-    // 显示调度摘要
+    // 面板: 每条路线可独立切换
     DOM.mapOverlay.classList.remove('hidden');
     DOM.routeCompare.innerHTML = `
       <div class="overlay-header"><span>🚛 CVRP多车调度</span></div>
-      ${summaryRows.map(r => `
-        <div class="route-card" style="border-left:4px solid ${CVRP_COLORS[(r.vehicle-1)%CVRP_COLORS.length]}">
-          <div class="route-title">车${r.vehicle} | ${r.stops}个公园 → ${r.disposal}</div>
-          <div class="route-meta">装载 ${(r.load/1000).toFixed(1)}/${(r.capacity/1000).toFixed(0)}吨 (${r.util}%)</div>
+      ${summaryRows.map((r, i) => `
+        <div class="route-card cvrp-card" id="cvrpCard${i}" style="border-left:4px solid ${r.color}"
+             onclick="window._toggleVehicle(${i})">
+          <div class="route-title">
+            <span class="cvrp-dot" style="background:${r.color}"></span>
+            车${r.vehicle} | ${r.stops}公园 → ${r.disposal.slice(0,8)}...
+          </div>
+          <div class="route-meta">
+            ${(r.load/1000).toFixed(1)}/${(r.capacity/1000).toFixed(0)}吨 (${r.util}%)
+            ${r.overCap ? ' <b style=color:red>超载!</b>' : ''}
+          </div>
         </div>`).join('')}
-      <div class="route-card"><b>总计: ${usedRoutes.length}车 | ${totalLoad/1000|0}吨 | ~${totalDist|0}km</b></div>
+      <div class="route-card" style="background:#F5F5F5">
+        <b>总计: ${usedRoutes.length}车 | ${(totalLoad/1000).toFixed(0)}吨</b>
+        ${unassigned.length > 0 ? ' | <span style=color:red>'+unassigned.length+'公园未分配</span>' : ''}
+      </div>
     `;
+
+    // 存储供toggle用
+    window._cvrpData = { allVehiclePaths, summaryRows, usedRoutes };
 
     DOM.resultBar.classList.remove('hidden');
     ['resDistance','resTime','resCO2','resFuel','resScore','resCongestion'].forEach(id => {
       document.getElementById(id).textContent = '—';
     });
     document.getElementById('resDistance').textContent = '~' + (totalDist|0) + ' km';
-    document.getElementById('resScore').textContent = usedRoutes.length + ' 辆车';
+    document.getElementById('resScore').textContent = usedRoutes.length + ' 车';
+    if (unassigned.length > 0) document.getElementById('resCongestion').textContent = unassigned.length + '未分配';
 
     btn.textContent = '🚛 多车调度 (CVRP)';
     btn.disabled = false;
   }
 
+  window._toggleVehicle = function(idx) {
+    const layer = cvrpLayers[idx];
+    if (!layer) return;
+    layer.visible = !layer.visible;
+    if (layer.visible) {
+      layer.polyline.setMap(STATE.map);
+      layer.markers.forEach(m => m.setMap(STATE.map));
+    } else {
+      layer.polyline.setMap(null);
+      layer.markers.forEach(m => m.setMap(null));
+    }
+    const card = document.getElementById('cvrpCard'+idx);
+    if (card) card.style.opacity = layer.visible ? '1' : '0.35';
+  };
+
+  function clearCVRPLayers() {
+    cvrpLayers.forEach(l => {
+      if (l.polyline) l.polyline.setMap(null);
+      l.markers.forEach(m => m.setMap(null));
+    });
+    cvrpLayers.length = 0;
+  }
+
+  let _cvrpClearTimer = null;
+  function fetchRouteCoords(from, to) {
+    return new Promise((resolve) => {
+      const cb = '_rv_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      if (_cvrpClearTimer) clearTimeout(_cvrpClearTimer);
+      window[cb] = function(data) {
+        delete window[cb];
+        const coords = [];
+        try {
+          if (data && data.route && data.route.paths && data.route.paths[0]) {
+            data.route.paths[0].steps.forEach(s => {
+              (s.polyline || '').split(';').forEach(p => {
+                const [lng, lat] = p.split(',').map(Number);
+                if (!isNaN(lng)) coords.push([lng, lat]);
+              });
+            });
+          }
+        } catch(e) {}
+        resolve(coords.length > 0 ? coords : []);
+      };
+      const s = document.createElement('script');
+      s.src = 'https://restapi.amap.com/v3/direction/driving?key=eb6fd67c6315d8e306616259ee6d8e3b&origin='
+        + from.lng + ',' + from.lat + '&destination=' + to.lng + ',' + to.lat
+        + '&extensions=all&output=JSON&callback=' + cb;
+      s.onerror = () => { delete window[cb]; resolve([]); };
+      document.head.appendChild(s);
+      _cvrpClearTimer = setTimeout(() => { if (s.parentNode) s.remove(); delete window[cb]; resolve([]); }, 10000);
+    });
+  }
+
   function createCircleIcon(color) {
-    const c = document.createElement('canvas'); c.width=18; c.height=18;
-    const ctx=c.getContext('2d'); ctx.beginPath(); ctx.arc(9,9,8,0,Math.PI*2);
-    ctx.fillStyle=color; ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+    const c = document.createElement('canvas'); c.width = 16; c.height = 16;
+    const ctx = c.getContext('2d'); ctx.beginPath(); ctx.arc(8, 8, 7, 0, Math.PI*2);
+    ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
     return c.toDataURL();
   }
 
   function haversine(lng1, lat1, lng2, lat2) {
-    const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
-    const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-  }
-
-  function fetchRouteCoords(from, to) {
-    return new Promise((resolve) => {
-      const cb='_cvrp_'+Date.now()+'_'+Math.random().toString(36).slice(2);
-      window[cb]=function(data){
-        delete window[cb];
-        const coords=[];
-        if(data.route&&data.route.paths&&data.route.paths[0]){
-          data.route.paths[0].steps.forEach(s=>{
-            (s.polyline||'').split(';').forEach(p=>{
-              const [lng,lat]=p.split(',').map(Number);
-              if(!isNaN(lng))coords.push([lng,lat]);
-            });
-          });
-        }
-        resolve(coords);
-      };
-      const s=document.createElement('script');
-      s.src='https://restapi.amap.com/v3/direction/driving?key=eb6fd67c6315d8e306616259ee6d8e3b&origin='+from.lng+','+from.lat+'&destination='+to.lng+','+to.lat+'&output=JSON&callback='+cb;
-      s.onerror=()=>resolve([]);
-      document.head.appendChild(s);
-      setTimeout(()=>{if(s.parentNode)s.remove()},8000);
-    });
+    const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   }
 
   // ==================== 路况切换 ====================

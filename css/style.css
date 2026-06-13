@@ -168,6 +168,12 @@ input[type="range"]::-webkit-slider-thumb {
 .badge-speed  { background: #BBDEFB; color: #1565C0; }
 .badge-dist  { background: #FFE0B2; color: #E65100; }
 .badge-ahp    { background: #C8E6C9; color: #1B5E20; }
+
+/* CVRP */
+.cvrp-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+.cvrp-card { cursor: pointer; transition: opacity 0.15s; }
+.cvrp-card:hover { opacity: 0.8; }
+
 .hidden { display: none; }
 
 /* 天气浮层 */
