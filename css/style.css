@@ -191,6 +191,21 @@ input[type="range"]::-webkit-slider-thumb {
 .weather-widget .weather-detail span { white-space: nowrap; }
 .weather-loading { font-size: 11px; color: var(--text-light); }
 
+/* 路况切换按钮 */
+.traffic-toggle {
+  position: absolute; top: 14px; right: 16px;
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(8px);
+  border-radius: 6px; padding: 7px 14px;
+  box-shadow: var(--shadow); z-index: 200;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); color: var(--text-sec);
+  transition: var(--transition); user-select: none;
+}
+.traffic-toggle:hover { background: var(--accent-l); }
+.traffic-toggle.active {
+  background: #1565C0; color: #fff; border-color: #1565C0;
+}
+
 /* 缩放按钮高度微调 */
 .amap-toolbar { transform: scale(1.08); transform-origin: top left; }
 

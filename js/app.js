@@ -18,6 +18,8 @@
     bestRouteIdx: 0,
     pluginReady: false,
     weather: { temp: 20, humidity: 50, wind: 3, visib: 8, weather: '晴', index: 0.15 },
+    trafficOn: false,
+    trafficLayer: null,
   };
 
   const $ = (s) => document.querySelector(s);
@@ -141,6 +143,10 @@
     });
     STATE.map.addControl(new AMap.ToolBar({ position: 'LT' }));
     STATE.map.addControl(new AMap.Scale({ position: 'LB' }));
+
+    // 交通路况图层
+    STATE.trafficLayer = new AMap.TileLayer.Traffic({ zIndex: 20 });
+    // 默认关闭，由右上角按钮切换
 
     STATE.map.on('click', function (e) {
       if (STATE.picking === 'origin') {
@@ -599,6 +605,21 @@
         <span>⚠️ 天气影响${(w.index*100).toFixed(0)}%</span>
       </div>`;
   }
+
+  // ==================== 路况切换 ====================
+  window._toggleTraffic = function() {
+    STATE.trafficOn = !STATE.trafficOn;
+    const btn = document.getElementById('trafficToggle');
+    if (STATE.trafficOn) {
+      STATE.trafficLayer.setMap(STATE.map);
+      btn.classList.add('active');
+      btn.innerHTML = '<span>🚦 实时路况 ●</span>';
+    } else {
+      STATE.trafficLayer.setMap(null);
+      btn.classList.remove('active');
+      btn.innerHTML = '<span>🚦 实时路况</span>';
+    }
+  };
 
   // ==================== 启动 ====================
   function init() {
