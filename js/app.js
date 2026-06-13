@@ -182,7 +182,7 @@
   async function loadMarkers() {
     try {
       const [pr, dr] = await Promise.all([
-        fetch('/data/parks.json'), fetch('/data/disposals.json')
+        fetch((location.pathname.replace(/\/[^/]*$/, '')) + '/data/parks.json'), fetch((location.pathname.replace(/\/[^/]*$/, '')) + '/data/disposals.json')
       ]);
       STATE.parks = await pr.json();
       STATE.disposals = await dr.json();
