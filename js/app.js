@@ -73,77 +73,61 @@
   // ==================== 自定义图标 ====================
   function createTreeIcon(fill, stroke) {
     const canvas = document.createElement('canvas');
-    canvas.width = 24; canvas.height = 32;
+    canvas.width = 18; canvas.height = 22;
     const ctx = canvas.getContext('2d');
     // 树干
     ctx.fillStyle = '#5D4037';
-    ctx.fillRect(10, 18, 4, 14);
+    ctx.fillRect(7, 14, 3, 8);
     // 树冠
     ctx.beginPath();
-    ctx.moveTo(12, 1);
-    ctx.lineTo(22, 12);
-    ctx.lineTo(18, 12);
-    ctx.lineTo(23, 20);
-    ctx.lineTo(14, 16);
-    ctx.lineTo(15, 24);
-    ctx.lineTo(9, 24);
-    ctx.lineTo(10, 16);
-    ctx.lineTo(1, 20);
-    ctx.lineTo(6, 12);
-    ctx.lineTo(2, 12);
+    ctx.moveTo(9, 1);
+    ctx.lineTo(16, 9);
+    ctx.lineTo(13, 9);
+    ctx.lineTo(17, 15);
+    ctx.lineTo(10, 12);
+    ctx.lineTo(11, 18);
+    ctx.lineTo(7, 18);
+    ctx.lineTo(8, 12);
+    ctx.lineTo(1, 15);
+    ctx.lineTo(5, 9);
+    ctx.lineTo(2, 9);
     ctx.closePath();
     ctx.fillStyle = fill;
     ctx.fill();
     ctx.strokeStyle = stroke;
-    ctx.lineWidth = 0.8;
+    ctx.lineWidth = 0.6;
     ctx.stroke();
     return new AMap.Icon({
-      size: new AMap.Size(24, 32),
+      size: new AMap.Size(18, 22),
       image: canvas.toDataURL(),
-      imageSize: new AMap.Size(24, 32),
+      imageSize: new AMap.Size(18, 22),
     });
   }
 
   function createDisposalIcon() {
     const canvas = document.createElement('canvas');
-    canvas.width = 28; canvas.height = 34;
+    canvas.width = 18; canvas.height = 22;
     const ctx = canvas.getContext('2d');
-    const w = 24, h = 28, x = 2, y = 4;
-    // 圆角矩形主体
-    const r = 5;
+    // 屋顶
     ctx.beginPath();
-    ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y);
-    ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-    ctx.lineTo(x+w, y+h-r);
-    ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-    ctx.lineTo(x+r, y+h);
-    ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-    ctx.lineTo(x, y+r);
-    ctx.quadraticCurveTo(x, y, x+r, y);
+    ctx.moveTo(1, 8); ctx.lineTo(9, 1); ctx.lineTo(17, 8);
     ctx.closePath();
-    ctx.fillStyle = '#1565C0';
+    ctx.fillStyle = '#C62828';
     ctx.fill();
-    ctx.strokeStyle = '#0D47A1';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-    // 回收箭头 (白色)
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    const cx = 14, cy = 16;
-    // 箭头1
-    ctx.beginPath(); ctx.moveTo(cx-3, cy+4); ctx.lineTo(cx, cy-1); ctx.lineTo(cx+3, cy+4); ctx.stroke();
-    // 箭头2
-    ctx.beginPath(); ctx.moveTo(cx-3, cy+1); ctx.lineTo(cx, cy-4); ctx.lineTo(cx+3, cy+1); ctx.stroke();
-    // 箭头3
-    ctx.beginPath(); ctx.moveTo(cx+1, cy+3); ctx.lineTo(cx-4, cy); ctx.lineTo(cx+1, cy-3); ctx.stroke();
-    // 顶部小横条
-    ctx.fillStyle = '#0D47A1';
-    ctx.fillRect(6, 2, 16, 4);
+    ctx.strokeStyle = '#8E0000';
+    ctx.lineWidth = 0.8; ctx.stroke();
+    // 房屋主体
+    ctx.fillStyle = '#FFF9C4';
+    ctx.fillRect(3, 8, 12, 12);
+    ctx.strokeStyle = '#8E0000';
+    ctx.strokeRect(3, 8, 12, 12);
+    // 门
+    ctx.fillStyle = '#5D4037';
+    ctx.fillRect(7, 13, 4, 7);
     return new AMap.Icon({
-      size: new AMap.Size(28, 34),
+      size: new AMap.Size(18, 22),
       image: canvas.toDataURL(),
-      imageSize: new AMap.Size(28, 34),
+      imageSize: new AMap.Size(18, 22),
     });
   }
 
