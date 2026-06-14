@@ -203,7 +203,8 @@ window._solveCVRP = async function() {
   const compare = document.getElementById('routeCompare');
   if (overlay) overlay.classList.remove('hidden');
   if (compare) compare.innerHTML = `
-    <div class="overlay-header"><span>🚛 调度方案 (${usedRoutes.length}车)</span></div>
+    <div class="overlay-header"><span>🚛 调度方案 (${usedRoutes.length}车)</span>
+      <button class="btn-refresh" onclick="window._resetCVRP()">↻ 重置</button></div>
     ${summaryRows.map((r, i) => {
       const stops = usedRoutes[i].stops.slice(0, 8);
       const stopNames = stops.map(s => s.name.length > 4 ? s.name.slice(0,4)+'..' : s.name).join(' → ');
@@ -243,6 +244,18 @@ window._solveCVRP = async function() {
   window._cvrpData = { summaryRows, usedRoutes };
   btn.textContent = '🚛 求解最优调度方案';
   btn.disabled = false;
+};
+
+window._resetCVRP = function() {
+  cvrpLayers.forEach(l => { if(l.polyline)l.polyline.setMap(null); l.markers.forEach(m=>m.setMap(null)); });
+  cvrpLayers = [];
+  const map = window._getMap && window._getMap();
+  if (map) { map.clearMap(); if (window._addAllMarkers) window._addAllMarkers(); }
+  const overlay = document.getElementById('mapOverlay');
+  if (overlay) overlay.classList.add('hidden');
+  const bar = document.getElementById('resultBar');
+  if (bar) bar.classList.add('hidden');
+  window._cvrpData = null;
 };
 
 window._toggleCVRPVehicle = function(idx) {
