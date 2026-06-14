@@ -639,7 +639,7 @@
       DOM.mapOverlay.classList.add('hidden');
       DOM.resultBar.classList.add('hidden');
       if (window._getMap && window._getMap()) { window._getMap().clearMap(); addAllMarkers(); }
-      if (window._updateCVRPCount) window._updateCVRPCount();
+      if (typeof initCVRPPanel === 'function') initCVRPPanel();
     }
     STATE.map.setZoomAndCenter(10, [116.40, 39.90]);
   };

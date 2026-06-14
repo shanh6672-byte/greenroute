@@ -17,7 +17,8 @@ const WASTE_MAP = {
 
 function initCVRPPanel() {
   const parks = (window._getParks && window._getParks()) || [];
-  if (parks.length === 0) { setTimeout(initCVRPPanel, 500); return; } // 等待数据加载
+  console.log('initCVRPPanel: parks.length =', parks.length);
+  if (parks.length === 0) { setTimeout(initCVRPPanel, 500); return; }
   const html = parks.map((p, i) => {
     const w = (WASTE_MAP[p.name] || 0.5).toFixed(1);
     return `<label class="cvrp-row" id="cvrpRow${i}">
