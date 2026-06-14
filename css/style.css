@@ -177,6 +177,14 @@ input[type="range"]::-webkit-slider-thumb {
 .badge-ahp    { background: #C8E6C9; color: #1B5E20; }
 
 /* CVRP */
+.cvrp-row {
+  display: flex; align-items: center; gap: 6px; padding: 3px 4px;
+  font-size: 12px; border-bottom: 1px solid #f0f0f0; cursor: pointer;
+}
+.cvrp-row:hover { background: var(--accent-l); }
+.cvrp-row input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; flex-shrink: 0; }
+.cvrp-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.cvrp-ton { width: 44px; padding: 2px 4px; border: 1px solid var(--border); border-radius: 3px; font-size: 11px; text-align: center; }
 .cvrp-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
 .cvrp-card { cursor: pointer; transition: opacity 0.15s; }
 .cvrp-card:hover { opacity: 0.8; }

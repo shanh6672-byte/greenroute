@@ -17,6 +17,7 @@ const WASTE_MAP = {
 
 function initCVRPPanel() {
   const parks = (window._getParks && window._getParks()) || [];
+  if (parks.length === 0) { setTimeout(initCVRPPanel, 500); return; } // 等待数据加载
   const html = parks.map((p, i) => {
     const w = (WASTE_MAP[p.name] || 0.5).toFixed(1);
     return `<label class="cvrp-row" id="cvrpRow${i}">
@@ -35,9 +36,13 @@ window._selectAllParks = function() {
   window._updateCVRPCount();
 };
 window._selectTopParks = function() {
-  document.querySelectorAll('#cvrpParkList input[type=checkbox]').forEach((cb, i) => {
-    cb.checked = i < 20;
+  // 按废品量从大到小排序，选前20
+  const items = [];
+  document.querySelectorAll('#cvrpParkList input[type=checkbox]').forEach(cb => {
+    items.push({ cb, waste: parseFloat(cb.dataset.waste) || 0 });
   });
+  items.sort((a, b) => b.waste - a.waste);
+  items.forEach((item, i) => { item.cb.checked = i < 20; });
   window._updateCVRPCount();
 };
 window._clearParks = function() {
