@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>北京市绿色固废运输最优路径规划系统</title>
 <link rel="stylesheet" href="css/style.css">
-<!-- 高德地图 JS API -->
 <script src="https://webapi.amap.com/maps?v=2.0&key=00a363b47c389f619409ae0486221c85&plugin=AMap.Driving,AMap.ToolBar,AMap.Scale"></script>
 </head>
 <body>
@@ -13,10 +12,12 @@
 <!-- ==================== 顶栏 ==================== -->
 <header class="topbar">
   <div class="logo">
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 22h20L12 2z"/><line x1="12" y1="22" x2="12" y2="10"/></svg>
     <span>GreenRoute</span>
   </div>
-  <h1>北京市绿色固废运输最优路径规划系统</h1>
+  <nav class="tabs">
+    <button class="tab active" data-tab="single" onclick="window._switchTab('single')">📍 单路径规划</button>
+    <button class="tab" data-tab="cvrp" onclick="window._switchTab('cvrp')">🚛 多车调度 (CVRP)</button>
+  </nav>
   <div class="topbar-right">
     <span id="trafficStatus" class="badge">● 实时路况</span>
   </div>
@@ -25,8 +26,8 @@
 <!-- ==================== 主体布局 ==================== -->
 <div class="main-container">
 
-  <!-- ===== 左侧控制面板 ===== -->
-  <aside class="sidebar" id="sidebar">
+  <!-- ===== 左侧面板: 单路径规划 ===== -->
+  <aside class="sidebar" id="panelSingle">
     <div class="panel-section">
       <h3>📍 起终点设置</h3>
       <div class="form-group">
@@ -37,59 +38,76 @@
         <label>终点（消纳点）</label>
         <select id="destSelect"></select>
       </div>
-      <div class="form-group">
-        <label>或点击地图选点</label>
-        <div class="btn-row">
-          <button id="btnPickOrigin" class="btn btn-outline btn-sm">选起点</button>
-          <button id="btnPickDest"   class="btn btn-outline btn-sm">选终点</button>
-        </div>
+      <div class="btn-row">
+        <button id="btnPickOrigin" class="btn btn-outline btn-sm">选起点</button>
+        <button id="btnPickDest"   class="btn btn-outline btn-sm">选终点</button>
       </div>
     </div>
-
     <div class="divider"></div>
-
     <div class="panel-section">
       <h3>⚖️ 因子权重调节</h3>
       <p class="hint">拖动滑块调节6个因子的相对重要性</p>
-
       <div class="sliders" id="sliders"></div>
-
       <div class="weight-summary">
-        <span>合计: </span>
-        <span id="weightSum" class="weight-value">100%</span>
+        <span>合计: </span><span id="weightSum" class="weight-value">100%</span>
       </div>
-
       <button id="btnReset" class="btn btn-outline btn-block">↺ 恢复默认权重</button>
     </div>
-
     <div class="divider"></div>
-
-    <div class="panel-section">
-      <button id="btnCalculate" class="btn btn-primary btn-block btn-lg">
-        🔍 计算最优路径
-      </button>
-      <p class="hint" style="margin-top:4px;text-align:center">基于 AHP 两层模型 + 实时路况</p>
-      <button id="btnCVRP" class="btn btn-outline btn-block" style="margin-top:8px">
-        🚛 多车调度 (CVRP)
-      </button>
-    </div>
+    <button id="btnCalculate" class="btn btn-primary btn-block btn-lg">🔍 计算最优路径</button>
+    <p class="hint" style="margin-top:4px;text-align:center">基于 AHP 两层模型 + 实时路况</p>
   </aside>
 
-  <!-- ===== 地图区域 ===== -->
+  <!-- ===== 左侧面板: CVRP多车调度 ===== -->
+  <aside class="sidebar hidden" id="panelCVRP">
+    <div class="panel-section">
+      <h3>📋 待运输站点</h3>
+      <p class="hint">勾选需要运输的公园，可修改废品量(t)</p>
+      <div style="max-height:360px;overflow-y:auto;margin-bottom:8px" id="cvrpParkList"></div>
+      <div class="btn-row">
+        <button class="btn btn-outline btn-sm" onclick="window._selectAllParks()">全选</button>
+        <button class="btn btn-outline btn-sm" onclick="window._selectTopParks()">Top20</button>
+        <button class="btn btn-outline btn-sm" onclick="window._clearParks()">清空</button>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="panel-section">
+      <h3>🚛 车辆配置</h3>
+      <div class="form-group">
+        <label>车辆数</label>
+        <select id="cvrpVehicleCount">
+          <option value="3">3 辆</option>
+          <option value="4">4 辆</option>
+          <option value="5" selected>5 辆</option>
+          <option value="6">6 辆</option>
+          <option value="8">8 辆</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>单车载重 (吨)</label>
+        <select id="cvrpCapacity">
+          <option value="5">5 吨</option>
+          <option value="8" selected>8 吨</option>
+          <option value="10">10 吨</option>
+          <option value="12">12 吨</option>
+          <option value="15">15 吨</option>
+        </select>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <button id="btnCVRPSolve" class="btn btn-primary btn-block btn-lg">🚛 求解最优调度方案</button>
+    <p class="hint" style="margin-top:4px;text-align:center">贪婪算法 + 容量约束 + 真实路网路径</p>
+  </aside>
+
+  <!-- ===== 地图 ===== -->
   <main class="map-area">
     <div id="mapContainer"></div>
-
-    <!-- 路况切换 -->
     <div id="trafficToggle" class="traffic-toggle" onclick="window._toggleTraffic()">
       <span>🚦 实时路况</span>
     </div>
-
-    <!-- 天气浮层 -->
     <div id="weatherWidget" class="weather-widget">
       <div class="weather-loading">⏳ 加载天气...</div>
     </div>
-
-    <!-- 地图上的浮动信息 -->
     <div id="mapOverlay" class="map-overlay hidden">
       <div id="routeCompare"></div>
     </div>
@@ -99,40 +117,17 @@
 <!-- ==================== 底部结果栏 ==================== -->
 <footer class="result-bar hidden" id="resultBar">
   <div class="result-inner">
-    <div class="result-item">
-      <span class="result-icon">📏</span>
-      <span class="result-label">最优距离</span>
-      <span class="result-value" id="resDistance">--</span>
-    </div>
-    <div class="result-item">
-      <span class="result-icon">⏱</span>
-      <span class="result-label">预计时间</span>
-      <span class="result-value" id="resTime">--</span>
-    </div>
-    <div class="result-item">
-      <span class="result-icon">🫧</span>
-      <span class="result-label">CO₂排放</span>
-      <span class="result-value" id="resCO2">--</span>
-    </div>
-    <div class="result-item">
-      <span class="result-icon">⛽</span>
-      <span class="result-label">燃油费用</span>
-      <span class="result-value" id="resFuel">--</span>
-    </div>
-    <div class="result-item highlight">
-      <span class="result-icon">⭐</span>
-      <span class="result-label">综合成本</span>
-      <span class="result-value" id="resScore">--</span>
-    </div>
-    <div class="result-item">
-      <span class="result-icon">🚦</span>
-      <span class="result-label">拥堵状态</span>
-      <span class="result-value" id="resCongestion">--</span>
-    </div>
+    <div class="result-item"><span class="result-icon">📏</span><span class="result-label">最优距离</span><span class="result-value" id="resDistance">--</span></div>
+    <div class="result-item"><span class="result-icon">⏱</span><span class="result-label">预计时间</span><span class="result-value" id="resTime">--</span></div>
+    <div class="result-item"><span class="result-icon">🫧</span><span class="result-label">CO₂排放</span><span class="result-value" id="resCO2">--</span></div>
+    <div class="result-item"><span class="result-icon">⛽</span><span class="result-label">燃油费用</span><span class="result-value" id="resFuel">--</span></div>
+    <div class="result-item highlight"><span class="result-icon">⭐</span><span class="result-label">综合成本</span><span class="result-value" id="resScore">--</span></div>
+    <div class="result-item"><span class="result-icon">🚦</span><span class="result-label">拥堵状态</span><span class="result-value" id="resCongestion">--</span></div>
   </div>
 </footer>
 
 <script src="js/ahp.js"></script>
+<script src="js/cvrp.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
