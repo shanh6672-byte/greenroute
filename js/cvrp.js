@@ -235,11 +235,7 @@ window._solveCVRP = async function() {
   `;
 
   const bar = document.getElementById('resultBar');
-  if (bar) bar.classList.remove('hidden');
-  const resIds = ['resDistance','resTime','resCO2','resFuel','resScore','resCongestion'];
-  resIds.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
-  const elDist = document.getElementById('resDistance'); if (elDist) elDist.textContent = '~'+(totalDist|0)+' km';
-  const elScore = document.getElementById('resScore'); if (elScore) elScore.textContent = usedRoutes.length+' 辆车';
+  if (bar) bar.classList.add('hidden');
 
   window._cvrpData = { summaryRows, usedRoutes };
   btn.textContent = '🚛 求解最优调度方案';
@@ -253,8 +249,6 @@ window._resetCVRP = function() {
   if (map) { map.clearMap(); if (window._addAllMarkers) window._addAllMarkers(); }
   const overlay = document.getElementById('mapOverlay');
   if (overlay) overlay.classList.add('hidden');
-  const bar = document.getElementById('resultBar');
-  if (bar) bar.classList.add('hidden');
   window._cvrpData = null;
 };
 
@@ -285,12 +279,6 @@ window._toggleCVRPVehicle = function(idx) {
       const pathStr = route.stops.map(s => s.name).join(' → ') + ' → ' + row.disposal;
       const el = document.getElementById('cvrpPathDetail');
       if (el) el.textContent = '🚛 车' + row.vehicle + ': ' + pathStr;
-      const elDist = document.getElementById('resDistance');
-      const elScore = document.getElementById('resScore');
-      const elTime = document.getElementById('resTime');
-      if (elDist) elDist.textContent = '车'+row.vehicle+' | ' + row.stops + '站';
-      if (elScore) elScore.textContent = (row.load/1000).toFixed(1)+' 吨';
-      if (elTime) elTime.textContent = row.util + '% 利用率';
     }
   }
 };

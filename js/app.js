@@ -638,8 +638,11 @@
     if (tab === 'cvrp') {
       DOM.mapOverlay.classList.add('hidden');
       DOM.resultBar.classList.add('hidden');
+      document.querySelector('.result-bar').style.display = 'none';
       if (window._getMap && window._getMap()) { window._getMap().clearMap(); addAllMarkers(); }
       if (typeof initCVRPPanel === 'function') initCVRPPanel();
+    } else {
+      document.querySelector('.result-bar').style.display = '';
     }
     STATE.map.setZoomAndCenter(10, [116.40, 39.90]);
   };
