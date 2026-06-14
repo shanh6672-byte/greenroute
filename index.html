@@ -32,11 +32,11 @@
       <h3>📍 起终点设置</h3>
       <div class="form-group">
         <label>起点（公园）</label>
-        <select id="originSelect"></select>
+        <select id="originSelect" aria-label="选择起点公园" title="选择起点公园"></select>
       </div>
       <div class="form-group">
         <label>终点（消纳点）</label>
-        <select id="destSelect"></select>
+        <select id="destSelect" aria-label="选择终点消纳点" title="选择终点消纳点"></select>
       </div>
       <div class="btn-row">
         <button id="btnPickOrigin" class="btn btn-outline btn-sm">选起点</button>
@@ -75,7 +75,7 @@
       <h3>🚛 车辆配置</h3>
       <div class="form-group">
         <label>车辆数</label>
-        <select id="cvrpVehicleCount">
+        <select id="cvrpVehicleCount" aria-label="车辆数量" title="车辆数量">
           <option value="3">3 辆</option>
           <option value="4">4 辆</option>
           <option value="5" selected>5 辆</option>
@@ -85,7 +85,7 @@
       </div>
       <div class="form-group">
         <label>单车载重 (吨)</label>
-        <select id="cvrpCapacity">
+        <select id="cvrpCapacity" aria-label="单车载重" title="单车载重">
           <option value="5">5 吨</option>
           <option value="8" selected>8 吨</option>
           <option value="10">10 吨</option>
