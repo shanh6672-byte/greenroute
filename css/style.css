@@ -47,16 +47,17 @@ body {
   flex-shrink: 0;
 }
 .topbar .logo {
-  display: flex; align-items: center; gap: 8px;
-  color: var(--primary); font-weight: 700; font-size: 16px;
+  display: flex; align-items: center; gap: 6px;
+  color: var(--primary); font-weight: 700; font-size: 18px;
 }
+.topbar .logo .logo-icon { font-size: 22px; }
 .topbar h1 { display: none; }
 
 /* 标签页导航 */
 .tabs { display: flex; gap: 4px; flex: 1; justify-content: center; }
 .tab {
   padding: 8px 20px; border: none; background: transparent;
-  font-size: 13px; font-weight: 500; color: var(--text-sec); cursor: pointer;
+  font-size: 15px; font-weight: 500; color: var(--text-sec); cursor: pointer;
   border-radius: 6px; transition: var(--transition);
 }
 .tab:hover { background: var(--accent-l); color: var(--primary); }
