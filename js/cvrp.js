@@ -202,17 +202,25 @@ window._solveCVRP = async function() {
   if (overlay) overlay.classList.remove('hidden');
   if (compare) compare.innerHTML = `
     <div class="overlay-header"><span>🚛 调度方案 (${usedRoutes.length}车)</span></div>
-    ${summaryRows.map((r, i) => `
+    ${summaryRows.map((r, i) => {
+      const stops = usedRoutes[i].stops.slice(0, 8);
+      const stopNames = stops.map(s => s.name.length > 4 ? s.name.slice(0,4)+'..' : s.name).join(' → ');
+      const more = usedRoutes[i].stops.length > 8 ? ' +'+(usedRoutes[i].stops.length-8)+'站' : '';
+      return `
       <div class="route-card cvrp-card" style="border-left:4px solid ${r.color}" onclick="window._toggleCVRPVehicle(${i})">
         <div class="route-title">
           <span class="cvrp-dot" style="background:${r.color}"></span>
-          车${r.vehicle} | ${r.stops}站点 → ${r.disposal.slice(0,10)}...
+          车${r.vehicle} → ${r.disposal}
+        </div>
+        <div class="route-meta" style="font-size:10px;line-height:1.4;word-break:break-all">
+          ${stopNames}${more}
         </div>
         <div class="route-meta">
           ${(r.load/1000).toFixed(1)}/${(r.capacity/1000).toFixed(0)}吨 (${r.util}%)
           ${r.overCap ? ' <b style=color:red>超载!</b>' : ''}
         </div>
-      </div>`).join('')}
+      </div>`;
+    }).join('')}
     <div class="route-card" style="background:#F5F5F5">
       <b>总计: ${usedRoutes.length}车 | ${(totalLoad/1000).toFixed(0)}吨 | ~${totalDist|0}km</b>
       ${unassigned.length > 0 ? ' | <span style=color:red>'+unassigned.length+'站点未分配</span>' : ''}
