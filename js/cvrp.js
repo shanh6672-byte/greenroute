@@ -51,8 +51,13 @@ window._clearParks = function() {
 };
 window._updateCVRPCount = function() {
   let count = 0, total = 0;
-  document.querySelectorAll('#cvrpParkList input[type=checkbox]').forEach(cb => {
-    if (cb.checked) { count++; total += parseFloat(cb.dataset.waste) || 0.5; }
+  document.querySelectorAll('#cvrpParkList .cvrp-row').forEach(row => {
+    const cb = row.querySelector('input[type=checkbox]');
+    const tonInput = row.querySelector('.cvrp-ton');
+    if (cb && cb.checked) {
+      count++;
+      total += parseFloat(tonInput.value) || parseFloat(cb.dataset.waste) || 0.5;
+    }
   });
   const btn = document.getElementById('btnCVRPSolve');
   if (btn) btn.textContent = '🚛 求解最优调度方案 (' + count + '站点/' + total.toFixed(1) + '吨)';
@@ -73,13 +78,18 @@ window._solveCVRP = async function() {
 
   // 收集选中的站点
   const selected = [];
-  document.querySelectorAll('#cvrpParkList input[type=checkbox]').forEach(cb => {
-    if (cb.checked) {
+  document.querySelectorAll('#cvrpParkList .cvrp-row').forEach(row => {
+    const cb = row.querySelector('input[type=checkbox]');
+    const tonInput = row.querySelector('.cvrp-ton');
+    if (cb && cb.checked) {
       const idx = parseInt(cb.dataset.idx);
-      selected.push({ ...parks[idx], waste: parseFloat(cb.dataset.waste) * 1000 || 500 }); // 吨→kg
+      const wasteTons = parseFloat(tonInput.value) || parseFloat(cb.dataset.waste) || 0.5;
+      if (parks[idx]) {
+        selected.push({ ...parks[idx], waste: wasteTons * 1000 }); // 吨→kg
+      }
     }
   });
-  if (selected.length === 0) { alert('请至少选择一个站点'); btn.disabled = false; return; }
+  if (selected.length === 0) { alert('请至少选择一个站点 (当前已加载' + parks.length + '个公园)'); btn.disabled = false; return; }
 
   const nVehicles = parseInt(document.getElementById('cvrpVehicleCount').value) || 5;
   const capacity = parseInt(document.getElementById('cvrpCapacity').value) * 1000 || 8000; // 吨→kg
