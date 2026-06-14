@@ -175,10 +175,12 @@ window._solveCVRP = async function() {
     const markers = [];
     route.stops.forEach((stop, si) => {
       if (si < maxSegs + 1) {
+        const label = stop.name.length > 4 ? stop.name.slice(0,4) : stop.name;
         const m = new AMap.Marker({
           position: [stop.lng, stop.lat],
-          label: { content: 'V'+route.vehicle.id, direction: 'top', offset: new AMap.Pixel(0,-5) },
-          icon: new AMap.Icon({ size: new AMap.Size(16,16), image: circleIcon(color), imageSize: new AMap.Size(16,16) }),
+          label: { content: label, direction: 'top', offset: new AMap.Pixel(0,-5),
+                   style: { fontSize:'10px', color:color, fontWeight:'bold', background:'rgba(255,255,255,0.85)', padding:'1px 3px', borderRadius:'2px' } },
+          icon: new AMap.Icon({ size: new AMap.Size(14,14), image: circleIcon(color), imageSize: new AMap.Size(14,14) }),
         });
         if (window._getMap) m.setMap(window._getMap());
         markers.push(m);
@@ -221,6 +223,10 @@ window._solveCVRP = async function() {
         </div>
       </div>`;
     }).join('')}
+    <div id="cvrpPathDetail" style="padding:8px 14px;font-size:11px;color:var(--text-sec);line-height:1.5;
+         border-bottom:1px solid var(--border);background:#FAFAFA">
+      👆 点击上方车辆卡片查看完整路线
+    </div>
     <div class="route-card" style="background:#F5F5F5">
       <b>总计: ${usedRoutes.length}车 | ${(totalLoad/1000).toFixed(0)}吨 | ~${totalDist|0}km</b>
       ${unassigned.length > 0 ? ' | <span style=color:red>'+unassigned.length+'站点未分配</span>' : ''}
@@ -240,20 +246,40 @@ window._solveCVRP = async function() {
 };
 
 window._toggleCVRPVehicle = function(idx) {
-  const layer = cvrpLayers[idx];
-  if (!layer) return;
-  layer.visible = !layer.visible;
   const map = window._getMap && window._getMap();
-  if (!map) return;
-  if (layer.visible) {
-    layer.polyline.setMap(map);
-    layer.markers.forEach(m => m.setMap(map));
-  } else {
-    layer.polyline.setMap(null);
-    layer.markers.forEach(m => m.setMap(null));
-  }
+  // 只显示选中的车, 隐藏其他
+  cvrpLayers.forEach((layer, i) => {
+    if (!layer) return;
+    const show = (i === idx);
+    layer.visible = show;
+    if (map) {
+      if (show) { layer.polyline.setMap(map); layer.markers.forEach(m => m.setMap(map)); }
+      else { layer.polyline.setMap(null); layer.markers.forEach(m => m.setMap(null)); }
+    }
+  });
+  // 更新卡片高亮
   const cards = document.querySelectorAll('.cvrp-card');
-  if (cards[idx]) cards[idx].style.opacity = layer.visible ? '1' : '0.35';
+  cards.forEach((card, i) => {
+    card.style.opacity = i === idx ? '1' : '0.35';
+    card.style.background = i === idx ? '#E8F5E9' : '';
+  });
+
+  // 展开显示完整路径
+  if (window._cvrpData && window._cvrpData.summaryRows) {
+    const row = window._cvrpData.summaryRows[idx];
+    const route = window._cvrpData.usedRoutes && window._cvrpData.usedRoutes[idx];
+    if (row && route) {
+      const pathStr = route.stops.map(s => s.name).join(' → ') + ' → ' + row.disposal;
+      const el = document.getElementById('cvrpPathDetail');
+      if (el) el.textContent = '🚛 车' + row.vehicle + ': ' + pathStr;
+      const elDist = document.getElementById('resDistance');
+      const elScore = document.getElementById('resScore');
+      const elTime = document.getElementById('resTime');
+      if (elDist) elDist.textContent = '车'+row.vehicle+' | ' + row.stops + '站';
+      if (elScore) elScore.textContent = (row.load/1000).toFixed(1)+' 吨';
+      if (elTime) elTime.textContent = row.util + '% 利用率';
+    }
+  }
 };
 
 function haversine(lng1, lat1, lng2, lat2) {
